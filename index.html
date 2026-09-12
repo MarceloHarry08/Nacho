@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Nacho el Maestro - 16-Bit Retro Taekwondo Beat 'em Up</title>
+  <meta name="description" content="Videojuego beat 'em up lineal 2D con la jugabilidad y precisión de Kung-Fu de NES, adaptado a temática de Taekwondo y ambientación de fantasía y zombis.">
+  <meta name="theme-color" content="#070913">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=Press+Start+2P&display=swap" rel="stylesheet">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- External Libraries: Pixi.js (v7), Tone.js (v14) & Nipple.js (v0.10) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
+</head>
+<body>
+
+  <!-- Arcade Cabinet Shell -->
+  <div id="arcade-cabinet">
+    <!-- Monitor Bezel -->
+    <div id="arcade-screen">
+      
+      <!-- Pixi Canvas Target -->
+      <div id="game-canvas-container"></div>
+
+      <!-- CRT Scanlines Filter Overlay (Toggleable) -->
+      <div id="crt-layer"></div>
+
+      <!-- User Interface & HUD Layer -->
+      <div id="ui-overlay">
+
+        <!-- 1. IN-GAME HUD -->
+        <div id="hud" class="hidden">
+          <div class="hud-top-bar">
+            
+            <!-- Player Health & Belt Status -->
+            <div class="player-plate">
+              <div class="player-info-row">
+                <span class="player-name">NACHO</span>
+                <div class="hp-bar-outer">
+                  <div id="player-hp-bar" class="hp-bar-fill"></div>
+                  <span id="player-hp-text" class="hp-bar-text">100 / 100</span>
+                </div>
+              </div>
+              <div class="belt-status-row">
+                <div class="belt-chip">
+                  <div id="belt-badge" class="belt-color-indicator"></div>
+                  <span id="belt-name-text">Cinturón Blanco (10º Kup)</span>
+                </div>
+                <span id="lives-counter" class="lives-pill">VIDAS: x3</span>
+              </div>
+            </div>
+
+            <!-- Score & Stage -->
+            <div class="score-plate">
+              <span id="score-text" class="score-label">SCORE: 000000</span>
+              <span id="level-badge" class="stage-label">ETAPA 1</span>
+            </div>
+
+          </div>
+
+          <!-- Boss Health Bar (Appears when Boss arrives) -->
+          <div id="boss-hp-container" class="hidden">
+            <span id="boss-name-text" class="boss-name">JEFE: EL CARNICERO MUTANTE</span>
+            <div class="boss-hp-outer">
+              <div id="boss-hp-bar" class="boss-hp-fill"></div>
+            </div>
+          </div>
+
+          <!-- Special Attack Widget (10s strict cooldown) -->
+          <div id="special-widget">
+            <div class="special-icon-box">
+              <div id="special-progress" class="special-progress-overlay"></div>
+              <span>🥋</span>
+            </div>
+            <div class="special-text-box">
+              <span class="special-title">KIHAP SAGRADO</span>
+              <span id="special-timer-text" class="special-timer">¡LISTO! [CTRL]</span>
+            </div>
+          </div>
+
+          <!-- Grab Alert Overlay -->
+          <div id="grab-alert" class="hidden">
+            ¡ZOMBI AFERRADO!<br>
+            ¡PRESIONA FLECHAS RÁPIDAMENTE PARA SAFARTE!
+          </div>
+
+          <!-- Boss Warning Banner -->
+          <div id="boss-warning" class="hidden">
+            ⚠️ ¡ADVERTENCIA! ⚠️<br>
+            ¡JEFE DE ZONA EN APROXIMACIÓN!
+          </div>
+
+        </div>
+
+        <!-- 2. TITLE SCREEN -->
+        <div id="title-screen" class="overlay-screen">
+          <div class="title-logo-container">
+            <h1 class="title-logo">NACHO EL MAESTRO</h1>
+            <p class="title-subtitle">EL CAMINO DEL TAEKWONDO CONTRA LA HORDA ZOMBI</p>
+          </div>
+
+          <div class="menu-options">
+            <button id="btn-start-game" class="arcade-btn btn-primary">🥋 INICIAR JUEGO</button>
+            <button id="btn-toggle-mode" class="arcade-btn">MODO: 3 VIDAS (CLÁSICO)</button>
+            <button id="btn-show-controls" class="arcade-btn">🎮 CONTROLES Y TÉCNICAS</button>
+            <button id="btn-show-credits" class="arcade-btn">📜 LORE Y CRÉDITOS</button>
+            <button id="btn-toggle-crt" class="arcade-btn">FILTRO CRT: ACTIVADO</button>
+          </div>
+        </div>
+
+        <!-- 3. CONTROLS MODAL -->
+        <div id="controls-modal" class="overlay-screen hidden">
+          <div class="modal-box">
+            <h2 class="modal-title">GUÍA DE TÉCNICAS TAEKWONDO</h2>
+            <div class="modal-content">
+              <div class="control-item">
+                <span>Movimiento Horizontal:</span>
+                <span class="key-badge">⬅️ ➡️ Flechas</span>
+              </div>
+              <div class="control-item">
+                <span>Salto Vertical / Diagonal:</span>
+                <span class="key-badge">⬆️ Flecha Arriba</span>
+              </div>
+              <div class="control-item">
+                <span>Agacharse (Crouch):</span>
+                <span class="key-badge">⬇️ Flecha Abajo</span>
+              </div>
+              <div class="control-item">
+                <span>De pie: Patada Circular (Dollyo Chagi):</span>
+                <span class="key-badge">ESPACIO</span>
+              </div>
+              <div class="control-item">
+                <span>Agachado: Barrida Baja (Ap Chagi rasante):</span>
+                <span class="key-badge">⬇️ + ESPACIO</span>
+              </div>
+              <div class="control-item">
+                <span>En el aire: Patada Voladora (Twichagi):</span>
+                <span class="key-badge">⬆️ + ESPACIO</span>
+              </div>
+              <div class="control-item">
+                <span>Especial: Kihap Sagrado / Tornado:</span>
+                <span class="key-badge">CTRL (Cooldown 10s)</span>
+              </div>
+              <div class="control-item">
+                <span>Zafarse de zombis que te agarran:</span>
+                <span class="key-badge">Presionar Flechas rápido</span>
+              </div>
+            </div>
+            <button id="btn-close-controls" class="arcade-btn">ENTENDIDO</button>
+          </div>
+        </div>
+
+        <!-- 4. CREDITS & LORE MODAL -->
+        <div id="credits-modal" class="overlay-screen hidden">
+          <div class="modal-box">
+            <h2 class="modal-title">HISTORIA Y CRÉDITOS</h2>
+            <div class="modal-content">
+              <p><strong>Nacho</strong> es un joven prodigio del Taekwondo tradicional. Cuando una extraña maldición zombi y espectral arrasa su ciudad, Nacho emprende un viaje marcial a través de 5 biomas hostiles para purificar la tierra y alcanzar el legendario <strong>Cinturón Negro</strong>.</p>
+              <br>
+              <p><strong>Desarrollado con orgullo retro:</strong></p>
+              <p>• Lead Game Designer & Retro Director</p>
+              <p>• Motor Gráfico: Pixi.js (v7) con sprites 16-bits pixel-perfect</p>
+              <p>• Motor de Audio: Tone.js (FM Chiptune & Procedural Sound FX)</p>
+            </div>
+            <button id="btn-close-credits" class="arcade-btn">VOLVER</button>
+          </div>
+        </div>
+
+        <!-- 5. LEVEL CLEAR / BELT PROMOTION MODAL -->
+        <div id="level-clear-modal" class="overlay-screen hidden">
+          <div class="modal-box">
+            <h2 id="level-clear-title" class="modal-title">¡JEFE DERROTADO!</h2>
+            <div id="level-clear-belt" class="belt-promo-box">Cinturón Amarillo</div>
+            <p id="level-clear-desc" class="modal-content" style="text-align: center;"></p>
+            <button id="btn-next-level" class="arcade-btn btn-primary">AVANZAR AL SIGUIENTE NIVEL 🥋</button>
+          </div>
+        </div>
+
+        <!-- 6. LIFE LOST MODAL (RESTART LEVEL) -->
+        <div id="life-lost-modal" class="overlay-screen hidden">
+          <div class="modal-box" style="border-color: #F1C40F; max-width: 440px;">
+            <h2 class="modal-title" style="color: #F1C40F; font-size: 11px; line-height: 1.6;">
+              Te gano la invasion zombie<br>Pero no te preocupes que tienes otra vida
+            </h2>
+            <p id="life-lost-remaining" style="color: #E74C3C; font-size: 10px; margin-top: 6px;">Vidas restantes: x2</p>
+            <div class="menu-options" style="width: 100%; margin-top: 12px;">
+              <button id="btn-continue-life" class="arcade-btn btn-primary">CONTINUAR 🥋</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 7. FINAL VICTORY & GRANDMASTER SCREEN -->
+        <div id="victory-modal" class="overlay-screen hidden">
+          <div class="modal-box">
+            <h2 class="modal-title" style="color: #F1C40F;">🏆 ¡GRAN MAESTRO DEL TAEKWONDO! 🏆</h2>
+            <div class="belt-promo-box" style="background: #17202A; color: #F1C40F; border-color: #F1C40F;">CINTURÓN NEGRO - 1er DAN</div>
+            <div class="modal-content" style="text-align: center;">
+              <p>¡Lord Ryoko ha sido purificado! Nacho ha dominado la mente, el cuerpo y el espíritu, convirtiéndose en el Maestro Supremo del Taekwondo.</p>
+              <br>
+              <p id="victory-score" style="font-weight: bold; color: #00F0FF;"></p>
+              <p id="victory-kills" style="color: #2ECC71;"></p>
+            </div>
+            <button id="btn-victory-title" class="arcade-btn btn-primary">VOLVER AL MENÚ PRINCIPAL</button>
+          </div>
+        </div>
+
+        <!-- 8. GAME OVER MODAL -->
+        <div id="game-over-modal" class="overlay-screen hidden">
+          <div class="modal-box" style="border-color: #E74C3C;">
+            <h2 class="modal-title" style="color: #E74C3C;">GAME OVER</h2>
+            <p class="modal-content" style="text-align: center;">El espíritu de un artista marcial nunca se rinde.</p>
+            <p id="gameover-score" style="color: #F1C40F; font-size: 13px;"></p>
+            <div class="menu-options" style="width: 100%;">
+              <button id="btn-retry" class="arcade-btn btn-primary">REINTENTAR</button>
+              <button id="btn-gameover-title" class="arcade-btn">MENÚ PRINCIPAL</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Mobile Touch Controls with Nipple.js (Activated ONLY on Mobile Devices) -->
+      <div id="mobile-touch-controls" class="hidden">
+        <!-- Nipple.js Dynamic Joystick Container (Left) -->
+        <div id="joystick-zone"></div>
+
+        <!-- Touch Action Buttons (Right) -->
+        <div class="mobile-action-buttons">
+          <button id="btn-mobile-attack" class="mobile-btn btn-attack" title="Patada / Golpe">🥋</button>
+          <button id="btn-mobile-special" class="mobile-btn btn-special" title="Kihap Tornado">⚡</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Game Scripts in Strict Modular Dependency Order -->
+  <script src="src/config.js"></script>
+  <script src="src/audio.js"></script>
+  <script src="src/pixelart.js"></script>
+  <script src="src/particles.js"></script>
+  <script src="src/backgrounds.js"></script>
+  <script src="src/entities.js"></script>
+  <script src="src/levels.js"></script>
+  <script src="src/ui.js"></script>
+  <script src="src/game.js"></script>
+</body>
+</html>

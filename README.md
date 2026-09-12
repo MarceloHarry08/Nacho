@@ -1,6 +1,6 @@
 # 🥋 Nacho el Maestro - 2D Retro Beat 'em Up
 
-![Nacho el Maestro Banner](assets/cover.jpg)
+
 
 **"Nacho el Maestro"** es un videojuego beat 'em up lineal en 2D que combina la jugabilidad y la precisión mecánica del clásico *Kung-Fu* de NES con el arte marcial del **Taekwondo** y una ambientación de fantasía y apocalipsis zombi en la era de los 16 bits.
 
